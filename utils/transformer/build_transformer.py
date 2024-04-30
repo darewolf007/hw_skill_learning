@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 from torch.autograd import Variable
-from robot_dynamic.utils.transformer import build_transformer, TransformerEncoder, TransformerEncoderLayer
+from utils.transformer.transformer import build_transformer, TransformerEncoder, TransformerEncoderLayer
 
 import numpy as np
 

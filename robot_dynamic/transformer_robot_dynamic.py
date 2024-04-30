@@ -2,7 +2,7 @@ import _init_paths
 import torch
 from torch import nn
 import numpy as np
-from robot_dynamic.utils import build_transformer
+from utils.transformer import build_transformer
 
 class robot_dynamic_with_jointxpose(nn.Module):
     def __init__(self, args):
