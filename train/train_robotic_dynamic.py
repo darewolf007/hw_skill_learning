@@ -68,19 +68,21 @@ def get_args_parser():
     parser = argparse.ArgumentParser('Set base param', add_help=False)
     parser.add_argument('--eval', action='store_true')
     parser.add_argument('--plt', action='store_true')
-    parser.add_argument('--yaml_dir', action='store', type=str, help='yaml config', default= "/home/haowen/corl2024/configs/panda_robotic_dynamic.yaml")
+    parser.add_argument('--use_wandb', action='store_true', help='use wandb log', default=False)
+    parser.add_argument('--yaml_dir', action='store', type=str, help='yaml config', default= "../configs/panda_robotic_dynamic.yaml")
     return parser
 
 def get_dataloader(args_config):
     current_directory = os.path.dirname(__file__)
     train_path = os.path.join(current_directory, args_config['data_dict_train_path'])
     val_path = os.path.join(current_directory, args_config['data_dict_val_path'])
-    train_dataloader, val_dataloader = load_data(train_path, val_path, args_config['train_batch_size'], args_config['val_batch_size'], args_config['joint_base_xpose'])
+    train_dataloader, val_dataloader = load_data(train_path, val_path, args_config['train_batch_size'], args_config['val_batch_size'], args_config['joint_base_xpose'], sample_terminal=args_config['sample_terminal'])
     return train_dataloader, val_dataloader
 
 def init_model(args_config):
     set_seed(args_config['seed'])
     policy = Train_Policy(args_config)
+    logger = None
     if args_config['load_pretrain']:
         ckpt_path = os.path.join(args_config['pre_train_model_path'])
         loading_status = policy.load_state_dict(torch.load(ckpt_path))
@@ -89,7 +91,9 @@ def init_model(args_config):
     if args_config['device'] == 'cuda':
         policy.cuda()
     optimizer = policy.configure_optimizers()
-    return policy, optimizer
+    if args.use_wandb: 
+        logger = setup_logging(args_config)
+    return policy, optimizer, logger
 
 def setup_logging(args_config):
     exp_name = args_config['exp_name']
@@ -104,10 +108,9 @@ def setup_logging(args_config):
     return logger
 
 def train_model(args):
-    args_config = load_config(args.yaml_dir)
-    policy, optimizer = init_model(args_config)
+    args_config = load_config(os.path.join(os.path.dirname(__file__), args.yaml_dir))
+    policy, optimizer, logger = init_model(args_config)
     train_dataloader, val_dataloader = get_dataloader(args_config)
-    logger = setup_logging(args_config)
     validation_history = []
     train_history = []
     min_val_loss = np.inf
@@ -120,7 +123,8 @@ def train_model(args):
             for batch_idx, data in enumerate(val_dataloader):
                 forward_dict = policy(data)
                 epoch_dicts.append(forward_dict)
-                logger.log_scalar_dict(forward_dict, prefix='val')
+                if args.use_wandb: 
+                    logger.log_scalar_dict(forward_dict, prefix='val')
             epoch_summary = compute_dict_mean(epoch_dicts)
             validation_history.append(epoch_summary)
             epoch_val_loss = epoch_summary['loss']
@@ -148,7 +152,8 @@ def train_model(args):
             optimizer.step()
             optimizer.zero_grad()
             train_history.append(detach_dict(forward_dict))
-            logger.log_scalar_dict(forward_dict, prefix='train')
+            if args.use_wandb: 
+                logger.log_scalar_dict(forward_dict, prefix='train')
         epoch_summary = compute_dict_mean(train_history[(batch_idx+1)*epoch:(batch_idx+1)*(epoch+1)])
         epoch_train_loss = epoch_summary['loss']
         print(f'Train loss: {epoch_train_loss.item():.5f}')

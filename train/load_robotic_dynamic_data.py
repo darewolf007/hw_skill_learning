@@ -48,9 +48,9 @@ class Robotic_FK_Dataset(torch.utils.data.Dataset):
         joint_base_xpose = torch.from_numpy(self.joint_base_xpose).float()
         return joint_qpose, end_effector_xpos, leftfinger_xpos, rightfinger_xpos, joint_base_xpose
 
-def load_data(data_dict_train_path, data_dict_val_path, batch_size_train, batch_size_val, joint_base_xpose = np.array([0,0,0])):
-    train_dataset = Robotic_FK_Dataset(data_dict_train_path, joint_base_xpose)
-    val_dataset = Robotic_FK_Dataset(data_dict_val_path, joint_base_xpose)
+def load_data(data_dict_train_path, data_dict_val_path, batch_size_train, batch_size_val, joint_base_xpose = np.array([0,0,0]), sample_terminal = 10):
+    train_dataset = Robotic_FK_Dataset(data_dict_train_path, joint_base_xpose, sample_terminal= sample_terminal)
+    val_dataset = Robotic_FK_Dataset(data_dict_val_path, joint_base_xpose,  sample_terminal= 2 * sample_terminal)
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size_train, shuffle=True, pin_memory=True, num_workers=1, prefetch_factor=1)
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size_val, shuffle=False, pin_memory=True, num_workers=1, prefetch_factor=1)
     return train_dataloader, val_dataloader

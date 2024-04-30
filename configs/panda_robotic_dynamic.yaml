@@ -3,8 +3,8 @@ onscreen_render: False
 
 # Train
 device: "cuda"
-train_batch_size: 8
-val_batch_size: 1
+train_batch_size: 128
+val_batch_size: 128
 seed: 0
 num_epochs: 2000
 lr: 1.0e-5
@@ -13,24 +13,25 @@ save_all_temp: False
 load_pretrain: False
 data_dict_train_path: "../data/robotic_model/train"
 data_dict_val_path: "../data/robotic_model/test"
-pre_train_model_path: ''
+pre_train_model_path: '../outputs/best_94_seed_0.ckpt'
 save_model_path: '../outputs/robot_dynamic_model'
 save_temp_model_path: '../outputs/robot_dynamic_model/temp'
 save_log_path: '../logs/robot_dynamic_model'
-exp_name: 'kitchen_panda_robotic_dynamic'
+sample_terminal: 40
 
 # wandb
 WANDB_PROJECT_NAME: 'robotic_dynamic_model'
 WANDB_ENTITY_NAME: 'sun1599895936'
+exp_name: 'kitchen_panda_robotic_dynamic'
 
 # Robot
 robot_name: panda_franka
 joint_dim: 9
 gripper_dim: 2
-joint_base_xpose: [0.0, 0.0, 0.0]
+joint_base_xpose: [0.0, 0.0, 0.18]
 
 # Robotic dynamic transformer
-hidden_dim: 512
+hidden_dim: 128
 dropout: 0.1
 nheads: 8
 dim_feedforward: 3200
