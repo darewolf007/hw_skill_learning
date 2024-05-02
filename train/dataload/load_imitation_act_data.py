@@ -225,7 +225,7 @@ def load_data(args_config, base_dir):
         train_dataset = KitenchenDataset(path_num = path_num,episode_len=episode_len, data_path = data_path,load_all_data=True, load_state_action=True)
         val_dataset = KitenchenDataset(path_num = path_num,episode_len=episode_len, data_path = data_path,load_all_data=True, load_state_action=True)
     elif args_config['task_name'] == "act_example":
-        from hw_mujoco.assets.act_example.constants import SIM_TASK_CONFIGS
+        from simulation_mujoco.assets.act_example.constants import SIM_TASK_CONFIGS
         example_data_path = SIM_TASK_CONFIGS[args_config[args_config['task_name']]['dataset_name']]['dataset_dir']
         data_path = os.path.join(base_dir, example_data_path)
         path_num = SIM_TASK_CONFIGS[args_config[args_config['task_name']]['dataset_name']]['num_episodes']
