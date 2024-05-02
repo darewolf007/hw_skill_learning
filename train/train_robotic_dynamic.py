@@ -8,8 +8,8 @@ from tqdm import tqdm
 from copy import deepcopy
 from robot_dynamic.transformer_robot_dynamic import robot_dynamic
 from utils.helper import load_config, set_seed, compute_dict_mean, detach_dict, euclidean_distance
-from utils.process_log import plot_history, WandBLogger, AttrDict
-from load_robotic_dynamic_data import load_data
+from utils.process_log import plot_history, WandBLogger, AttrDict, setup_logging
+from train.dataload.load_robotic_dynamic_data import load_data
 from torch.nn import functional as F
 
 class Train_Policy(nn.Module):
@@ -94,18 +94,6 @@ def init_model(args_config):
     if args.use_wandb: 
         logger = setup_logging(args_config)
     return policy, optimizer, logger
-
-def setup_logging(args_config):
-    exp_name = args_config['exp_name']
-    WANDB_PROJECT_NAME = args_config['WANDB_PROJECT_NAME']
-    WANDB_ENTITY_NAME = args_config['WANDB_ENTITY_NAME']
-    log_path = os.path.join(os.path.dirname(__file__), args_config['save_log_path'])
-    conf = AttrDict()
-    conf.device = args_config['device']
-    conf.exp_name = exp_name
-    conf.log_path = log_path
-    logger = WandBLogger(exp_name, WANDB_PROJECT_NAME, entity=WANDB_ENTITY_NAME, path=log_path, conf=conf)
-    return logger
 
 def train_model(args):
     args_config = load_config(os.path.join(os.path.dirname(__file__), args.yaml_dir))

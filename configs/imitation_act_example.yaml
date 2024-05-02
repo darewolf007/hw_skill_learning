@@ -1,0 +1,89 @@
+#mode
+use_image: false
+use_state: True
+onscreen_render: True
+task_name: "kitchen_one_task" # "kitchen_one_task" "kitchen_all_task" "kitchen_one_task_allstep" "act_example"
+camera_names: ['top']
+
+#train
+num_epochs: 2000
+lr: 1.0e-5
+batch_size: 2
+weight_decay: 0.0001
+epochs: 300
+lr_drop: 200
+load_pretrain: False
+seed: 0
+ckpt_dir: "../outputs/imitation_model/act_policy"
+policy_class: "ACT"
+pretrain_ckpt: ""
+dataset_dir: ""
+dataset_name: ""
+episode_len: 0
+num_episodes: 0
+device: "cuda"
+
+#log
+plt: True
+use_wandb: True
+WANDB_PROJECT_NAME: 'imitation_act_model'
+WANDB_ENTITY_NAME: 'sun1599895936'
+exp_name: 'kitchen_panda_act_one_task'
+save_log_path: '../logs/imitation_act_model'
+
+#transformer
+hidden_dim: 512
+dropout: 0.1
+nheads: 8
+dim_feedforward: 3200
+enc_layers: 4
+dec_layers: 7
+pre_norm: true
+activation: "relu"
+
+#backbone 
+lr_backbone: 1e-05
+masks: true
+backbone: resnet18
+dilation: true
+position_embedding: sine
+
+# detr-vae
+num_queries: 400
+action_dim: 9
+joint_dim: 9
+env_dim: 60
+latent_dim: 32
+
+# act policy
+kl_weight: 10
+clip_max_norm: 0.1
+chunk_size: 100
+temporal_agg: true
+
+# Mujoco simulator
+DT: 0.02
+
+#dataset
+kitchen_one_task:
+  dataset_dir: "../data/imitation/kitchen/"
+  dataset_name: "begin to microwave.csv"
+  episode_len: 20
+  num_episodes: 300
+  num_queries: 20
+kitchen_all_task:
+  dataset_dir: "../data/imitation/kitchen/"
+  dataset_name: "microwave_kettle_bottom_burner_3.csv"
+  episode_len: 200
+  num_episodes: 30
+  num_queries: 50
+kitchen_one_task_allstep:
+  dataset_dir: "../data/imitation/kitchen/"
+  dataset_name: "microwave_data.pkl"
+  episode_len: 800
+  num_episodes: 300
+  num_queries: 200
+act_example:
+  dataset_dir: "../data/imitation/example/"
+  episode_len: 400
+  num_episodes: 50

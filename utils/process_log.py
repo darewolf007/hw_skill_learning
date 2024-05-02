@@ -155,3 +155,15 @@ def plot_history(train_history, validation_history, num_epochs, ckpt_dir, seed):
         plt.title(key)
         plt.savefig(plot_path)
     print(f'Saved plots to {ckpt_dir}')
+
+def setup_logging(args_config):
+    exp_name = args_config['exp_name']
+    WANDB_PROJECT_NAME = args_config['WANDB_PROJECT_NAME']
+    WANDB_ENTITY_NAME = args_config['WANDB_ENTITY_NAME']
+    log_path = os.path.join(os.path.dirname(__file__), args_config['save_log_path'])
+    conf = AttrDict()
+    conf.device = args_config['device']
+    conf.exp_name = exp_name
+    conf.log_path = log_path
+    logger = WandBLogger(exp_name, WANDB_PROJECT_NAME, entity=WANDB_ENTITY_NAME, path=log_path, conf=conf)
+    return logger

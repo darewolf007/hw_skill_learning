@@ -3,6 +3,8 @@ import pickle
 import torch
 import numpy as np
 import collections
+import csv
+import os
 
 def load_config(config_file):
     with open(config_file, 'r') as f:
@@ -56,3 +58,27 @@ def euclidean_distance(tensor1, tensor2):
     squared_difference = (tensor1 - tensor2).pow(2).sum(dim=-1)
     euclidean_dist = squared_difference.sqrt()
     return euclidean_dist
+
+def read_dict_with_twodim_numpy_to_csv(filename):
+    csv.field_size_limit(1000000)
+    with open(filename, 'r') as csvfile:
+        csv_reader = csv.reader(csvfile)
+        header = next(csv_reader)
+        read_data_dict = {key: [] for key in header}
+        for row in csv_reader:
+            for key, value_str in zip(header, row):
+                value = np.array(eval(value_str))
+                read_data_dict[key].append(value)
+    return read_data_dict
+
+def check_and_create_dir(dir_path):
+    if not os.path.isdir(dir_path):
+        os.makedirs(dir_path)
+
+def args_overwrite_config(base_config):
+    task_name = base_config['task_name']
+    task_config = base_config[task_name]
+    for key, value in task_config.items():
+        if value is not None:
+            base_config[key] = value
+    return base_config
