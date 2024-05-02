@@ -225,9 +225,14 @@ def load_data(args_config, base_dir):
         train_dataset = KitenchenDataset(path_num = path_num,episode_len=episode_len, data_path = data_path,load_all_data=True, load_state_action=True)
         val_dataset = KitenchenDataset(path_num = path_num,episode_len=episode_len, data_path = data_path,load_all_data=True, load_state_action=True)
     elif args_config['task_name'] == "act_example":
-        pass
+        from hw_mujoco.assets.act_example.constants import SIM_TASK_CONFIGS
+        example_data_path = SIM_TASK_CONFIGS[args_config[args_config['task_name']]['dataset_name']]['dataset_dir']
+        data_path = os.path.join(base_dir, example_data_path)
+        path_num = SIM_TASK_CONFIGS[args_config[args_config['task_name']]['dataset_name']]['num_episodes']
+        camera_names = SIM_TASK_CONFIGS[args_config[args_config['task_name']]['dataset_name']]['camera_names']
+        return load_example_data(data_path, path_num, camera_names, args_config['train_batch_size'], args_config['val_batch_size'])
     else:
         raise ValueError("Please choose a valid task name")
-    train_dataloader = DataLoader(train_dataset, batch_size=args_config['batch_size'], shuffle=True, pin_memory=True, num_workers=1, prefetch_factor=1)
-    val_dataloader = DataLoader(val_dataset, batch_size=args_config['batch_size'], shuffle=True, pin_memory=True, num_workers=1, prefetch_factor=1)
+    train_dataloader = DataLoader(train_dataset, batch_size=args_config['train_batch_size'], shuffle=True, pin_memory=True, num_workers=1, prefetch_factor=1)
+    val_dataloader = DataLoader(val_dataset, batch_size=args_config['batch_strain_batch_sizeize'], shuffle=True, pin_memory=True, num_workers=1, prefetch_factor=1)
     return train_dataloader, val_dataloader

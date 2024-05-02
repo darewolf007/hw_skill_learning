@@ -8,7 +8,8 @@ camera_names: ['top']
 #train
 num_epochs: 2000
 lr: 1.0e-5
-batch_size: 2
+train_batch_size: 8
+val_batch_size: 8
 weight_decay: 0.0001
 epochs: 300
 lr_drop: 200
@@ -42,10 +43,10 @@ pre_norm: true
 activation: "relu"
 
 #backbone 
-lr_backbone: 1e-05
-masks: true
+lr_backbone: 1.0e-05
+masks: false
 backbone: resnet18
-dilation: true
+dilation: false
 position_embedding: sine
 
 # detr-vae
@@ -84,6 +85,13 @@ kitchen_one_task_allstep:
   num_episodes: 300
   num_queries: 200
 act_example:
+  use_image: true
+  use_state: false
   dataset_dir: "../data/imitation/example/"
+  dataset_name: "sim_transfer_cube_scripted"
+  action_dim: 14
+  joint_dim: 14
   episode_len: 400
   num_episodes: 50
+  WANDB_PROJECT_NAME: 'imitation_act_example'
+  exp_name: 'demo_sim_transfer_cube_scripted'
