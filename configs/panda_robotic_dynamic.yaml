@@ -13,7 +13,7 @@ save_all_temp: False
 load_pretrain: False
 data_dict_train_path: "../data/robotic_model/train"
 data_dict_val_path: "../data/robotic_model/test"
-pre_train_model_path: '../outputs/best_94_seed_0.ckpt'
+pre_train_model_path: '../outputs/robot_dynamic_model/best_94_seed_0.ckpt'
 save_model_path: '../outputs/robot_dynamic_model'
 save_temp_model_path: '../outputs/robot_dynamic_model/temp'
 save_log_path: '../logs/robot_dynamic_model'

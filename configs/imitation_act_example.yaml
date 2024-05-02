@@ -2,8 +2,8 @@
 use_image: false
 use_state: True
 onscreen_render: True
-task_name: "kitchen_one_task" # "kitchen_one_task" "kitchen_all_task" "kitchen_one_task_allstep" "act_example"
-camera_names: ['top']
+task_name: "kitchen_all_task" # "kitchen_one_task" "kitchen_all_task" "kitchen_one_task_allstep" "act_example"
+use_wandb: True
 
 #train
 num_epochs: 2000
@@ -25,13 +25,12 @@ num_episodes: 0
 device: "cuda"
 
 #log
-plt: True
-use_wandb: True
+plt: False
 WANDB_PROJECT_NAME: 'imitation_act_model'
 WANDB_ENTITY_NAME: 'sun1599895936'
 exp_name: 'kitchen_panda_act_one_task'
 save_log_path: '../logs/imitation_act_model'
-resume: False
+prefix_name: False
 
 #transformer
 hidden_dim: 512
@@ -65,8 +64,9 @@ temporal_agg: true
 
 # Mujoco simulator
 DT: 0.02
+camera_names: ['top']
 
-#dataset
+#subtask rewritting params
 kitchen_one_task:
   dataset_dir: "../data/imitation/kitchen/"
   dataset_name: "begin to microwave.csv"

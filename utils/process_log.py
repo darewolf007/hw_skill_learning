@@ -162,7 +162,7 @@ def get_time():
 
 def setup_logging(args_config):
     exp_name = args_config['exp_name']
-    if not args_config['resume']:
+    if args_config['prefix_name']:
         exp_name = get_time() + '_' + exp_name
     WANDB_PROJECT_NAME = args_config['WANDB_PROJECT_NAME']
     WANDB_ENTITY_NAME = args_config['WANDB_ENTITY_NAME']

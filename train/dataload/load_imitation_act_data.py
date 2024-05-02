@@ -76,7 +76,7 @@ class EpisodicDataset(torch.utils.data.Dataset):
         return image_data, qpos_data, action_data, is_pad
 
 class KitenchenDataset(torch.utils.data.Dataset):
-    def __init__(self,path_num = 40,episode_len=35, data_path = None,load_all_data = False, load_state_action = False):
+    def __init__(self,path_num = 40, episode_len=35, data_path = None, load_all_data = False, load_state_action = False, episode_ids = None):
         super(KitenchenDataset).__init__()
         self.episode_len = episode_len
         self.episode_num = path_num
@@ -118,12 +118,17 @@ class KitenchenDataset(torch.utils.data.Dataset):
         self.qpos_variance_value = np.var(np.array(self.qpos).reshape(-1, self.qpos[0].shape[-1]), axis=0, dtype=np.float32)
         self.sample_full_episode = False
         self.is_sim = True
+        self.episode_ids = episode_ids
+        if episode_ids is not None:
+            self.episode_num = len(episode_ids)
         self.__getitem__(0) # initialize self.is_sim
 
     def __len__(self):
         return self.episode_num
 
     def __getitem__(self, index):
+        if self.episode_ids is not None:
+            index = self.episode_ids[index]
         original_action_shape = self.action[0].shape
         episode_len = original_action_shape[0]
         if self.sample_full_episode:
@@ -215,15 +220,17 @@ def load_data(args_config, base_dir):
     data_path = os.path.join(base_dir, args_config[args_config['task_name']]['dataset_dir']+ args_config[args_config['task_name']]['dataset_name'])
     path_num = args_config[args_config['task_name']]['num_episodes']
     episode_len = args_config[args_config['task_name']]['episode_len']
+    train_episode_ids = random.sample(range(path_num), int(path_num * 0.8))
+    val_episode_ids = list(set(range(path_num)) - set(train_episode_ids))
     if args_config['task_name'] == "kitchen_one_task":
-        train_dataset = KitenchenDataset(path_num = path_num,episode_len=episode_len, data_path = data_path)
-        val_dataset = KitenchenDataset(path_num = path_num,episode_len=episode_len, data_path = data_path)
+        train_dataset = KitenchenDataset(path_num = path_num,episode_len=episode_len, data_path = data_path, episode_ids=train_episode_ids)
+        val_dataset = KitenchenDataset(path_num = path_num,episode_len=episode_len, data_path = data_path, episode_ids=val_episode_ids)
     elif args_config['task_name'] == "kitchen_all_task":
-        train_dataset = KitenchenDataset(path_num = path_num, episode_len = episode_len, data_path = data_path)
-        val_dataset = KitenchenDataset(path_num = path_num, episode_len = episode_len, data_path = data_path)
+        train_dataset = KitenchenDataset(path_num = path_num, episode_len = episode_len, data_path = data_path, episode_ids= train_episode_ids)
+        val_dataset = KitenchenDataset(path_num = path_num, episode_len = episode_len, data_path = data_path, episode_ids=val_episode_ids)
     elif args_config['task_name'] == "kitchen_one_task_allstep":
-        train_dataset = KitenchenDataset(path_num = path_num,episode_len=episode_len, data_path = data_path,load_all_data=True, load_state_action=True)
-        val_dataset = KitenchenDataset(path_num = path_num,episode_len=episode_len, data_path = data_path,load_all_data=True, load_state_action=True)
+        train_dataset = KitenchenDataset(path_num = path_num,episode_len=episode_len, data_path = data_path,load_all_data=True, load_state_action=True, episode_ids= train_episode_ids)
+        val_dataset = KitenchenDataset(path_num = path_num,episode_len=episode_len, data_path = data_path,load_all_data=True, load_state_action=True, episode_ids=val_episode_ids)
     elif args_config['task_name'] == "act_example":
         from simulation_mujoco.assets.act_example.constants import SIM_TASK_CONFIGS
         example_data_path = SIM_TASK_CONFIGS[args_config[args_config['task_name']]['dataset_name']]['dataset_dir']

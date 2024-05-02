@@ -84,7 +84,7 @@ def init_model(args_config):
     policy = Train_Policy(args_config)
     logger = None
     if args_config['load_pretrain']:
-        ckpt_path = os.path.join(args_config['pre_train_model_path'])
+        ckpt_path = os.path.join(os.path.dirname(__file__), args_config['pre_train_model_path'])
         loading_status = policy.load_state_dict(torch.load(ckpt_path))
         if loading_status:
             print("success load pretrain: ", ckpt_path)
