@@ -6,6 +6,7 @@ import inspect
 import torch
 from PIL import Image
 from utils.helper import flatten_dict, prefix_dict
+import datetime
 
 def fig2img(fig):
     """Converts a given figure handle to a 3-channel numpy image array."""
@@ -156,8 +157,13 @@ def plot_history(train_history, validation_history, num_epochs, ckpt_dir, seed):
         plt.savefig(plot_path)
     print(f'Saved plots to {ckpt_dir}')
 
+def get_time():
+    return datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+
 def setup_logging(args_config):
     exp_name = args_config['exp_name']
+    if not args_config['resume']:
+        exp_name = get_time() + '_' + exp_name
     WANDB_PROJECT_NAME = args_config['WANDB_PROJECT_NAME']
     WANDB_ENTITY_NAME = args_config['WANDB_ENTITY_NAME']
     log_path = os.path.join(os.path.dirname(__file__), args_config['save_log_path'])

@@ -234,5 +234,5 @@ def load_data(args_config, base_dir):
     else:
         raise ValueError("Please choose a valid task name")
     train_dataloader = DataLoader(train_dataset, batch_size=args_config['train_batch_size'], shuffle=True, pin_memory=True, num_workers=1, prefetch_factor=1)
-    val_dataloader = DataLoader(val_dataset, batch_size=args_config['batch_strain_batch_sizeize'], shuffle=True, pin_memory=True, num_workers=1, prefetch_factor=1)
+    val_dataloader = DataLoader(val_dataset, batch_size=args_config['val_batch_size'], shuffle=True, pin_memory=True, num_workers=1, prefetch_factor=1)
     return train_dataloader, val_dataloader

@@ -31,6 +31,7 @@ WANDB_PROJECT_NAME: 'imitation_act_model'
 WANDB_ENTITY_NAME: 'sun1599895936'
 exp_name: 'kitchen_panda_act_one_task'
 save_log_path: '../logs/imitation_act_model'
+resume: False
 
 #transformer
 hidden_dim: 512
@@ -72,18 +73,24 @@ kitchen_one_task:
   episode_len: 20
   num_episodes: 300
   num_queries: 20
+  WANDB_PROJECT_NAME: 'imitation_act_model'
+  exp_name: 'kitchen_panda_act_one_task'
 kitchen_all_task:
   dataset_dir: "../data/imitation/kitchen/"
   dataset_name: "microwave_kettle_bottom_burner_3.csv"
   episode_len: 200
   num_episodes: 30
   num_queries: 50
+  WANDB_PROJECT_NAME: 'imitation_act_model_all_task'
+  exp_name: 'kitchen_panda_act_all_task'
 kitchen_one_task_allstep:
   dataset_dir: "../data/imitation/kitchen/"
   dataset_name: "microwave_data.pkl"
   episode_len: 800
   num_episodes: 300
   num_queries: 200
+  WANDB_PROJECT_NAME: 'imitation_act_model_all_step'
+  exp_name: 'kitchen_panda_act_all_step'
 act_example:
   use_image: true
   use_state: false
