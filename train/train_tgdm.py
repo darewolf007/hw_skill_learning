@@ -11,11 +11,12 @@ from dataload.load_imitation_act_data import load_data
 from utils.helper import load_config, set_seed, compute_dict_mean, detach_dict, check_and_create_dir, args_overwrite_config
 from utils.process_log import plot_history, WandBLogger, AttrDict, setup_logging
 from imitation_learning.act_policy import ACTPolicy
+from TGDM.tgdm_policy import TGDMPolicy
 
 def get_args_parser():
     parser = argparse.ArgumentParser('Set base param', add_help=False)
     parser.add_argument('--eval', action='store_true')
-    parser.add_argument('--yaml_dir', action='store', type=str, help='yaml config', default= "../configs/imitation_act_example.yaml")
+    parser.add_argument('--yaml_dir', action='store', type=str, help='yaml config', default= "../configs/tgdm_test.yaml")
     return parser
 
 def main(args):
@@ -45,12 +46,16 @@ def main(args):
 def make_policy(policy_class, policy_config):
     if policy_class == 'ACT':
         policy = ACTPolicy(policy_config)
+    elif policy_class == 'TGDM':
+        policy = TGDMPolicy(policy_config)
     else:
         raise NotImplementedError
     return policy
 
 def make_optimizer(policy_class, policy):
     if policy_class == 'ACT':
+        optimizer = policy.configure_optimizers()
+    elif policy_class == 'TGDM':
         optimizer = policy.configure_optimizers()
     else:
         raise NotImplementedError

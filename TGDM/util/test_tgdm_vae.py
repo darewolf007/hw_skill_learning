@@ -5,7 +5,7 @@ from utils.transformer.build_transformer import build_encoder, get_sinusoid_enco
 from utils.transformer.transformer import build_transformer
 from imitation_learning.act_util.backone import build_backbone
 
-class DETRVAE(nn.Module):
+class TGDM_VAE(nn.Module):
     """ This is the DETR module that performs object detection """
     def __init__(self, backbones, transformer, encoder, args):
         """ Initializes the model.
@@ -51,10 +51,21 @@ class DETRVAE(nn.Module):
         self.latent_proj = nn.Linear(hidden_dim, self.latent_dim*2) # project hidden state to latent std, var
         self.register_buffer('pos_table', get_sinusoid_encoding_table(1+1+args["num_queries"], hidden_dim)) # [CLS], qpos, a_seq
         self.register_buffer('state_pos_table', get_sinusoid_encoding_table(1, hidden_dim)) # [CLS], qpos, a_seq
-        
+        self.register_buffer('robotic_pos_table', get_sinusoid_encoding_table(1+args["joint_dim"], args["hidden_dim"])) 
         # decoder extra parameters
         self.latent_out_proj = nn.Linear(self.latent_dim, hidden_dim) # project latent sample to embedding
-        self.additional_pos_embed = nn.Embedding(2, hidden_dim) # learned position embedding for proprio and latent
+        #robotic_dynamic model
+        self.use_robotic_dynamic = args["use_robotic_dynamic"]
+        if self.use_robotic_dynamic:
+            self.robotic_transformer_args = args[args['robotic_name']]
+            self.base_xpos = torch.tensor(args[args['robotic_name']]["joint_base_xpose"]).float().cuda()
+            self.encoder_joint_qpos_proj = nn.Linear(1, args["hidden_dim"])  # project qpos to embedding
+            self.encoder_joint_xpos_proj = nn.Linear(3, args["hidden_dim"])  # project xpos to embedding
+            self.robotic_dynamic_encoder = build_encoder(self.robotic_transformer_args)
+            self.additional_pos_embed = nn.Embedding(1 + 1 + args["joint_dim"], hidden_dim)
+        else:
+            self.additional_pos_embed = nn.Embedding(2, hidden_dim) # learned position embedding for proprio and latent
+
 
     def reparametrize(self, mu, logvar):
         std = logvar.div(2).exp()
@@ -117,10 +128,48 @@ class DETRVAE(nn.Module):
             pos = torch.cat(all_cam_pos, axis=3)
             hs = self.transformer(src, None, self.query_embed.weight, pos, latent_input, proprio_input, self.additional_pos_embed.weight)[6]
         else:
-            proprio_input = self.input_proj_robot_state(qpos)
-            env_state = self.input_proj_env_state(env_state)
-            env_state = torch.unsqueeze(env_state, axis=1)
-            hs = self.transformer(env_state, None, self.query_embed.weight, self.pos.weight, latent_input, proprio_input, self.additional_pos_embed.weight)[6]
+            if self.use_robotic_dynamic:
+                self.base_xpos = self.base_xpos.repeat(bs, 1)
+                joint_qpos_embed = torch.unsqueeze(qpos, axis=2)
+                joint_qpos_embed = self.encoder_joint_qpos_proj(joint_qpos_embed)  # (bs, joint_dim, hidden_dim)
+                joint_xqpos_embed = torch.unsqueeze(self.base_xpos, axis=1)  # (bs, 1, hidden_dim)
+                joint_xqpos_embed = self.encoder_joint_xpos_proj(joint_xqpos_embed)
+                encoder_input = torch.cat([joint_xqpos_embed, joint_qpos_embed], axis=1) # (bs, seq+1, hidden_dim)
+                encoder_input = encoder_input.permute(1, 0, 2) # (seq+1, bs, hidden_dim)
+                pos_embed = self.robotic_pos_table.clone().detach()
+                pos_embed = pos_embed.permute(1, 0, 2)  # (seq+1, 1, hidden_dim)
+                encoder_output = self.encoder(encoder_input, pos=pos_embed)
+                joint_embedding = encoder_output.permute(1, 0, 2)
+                env_state = self.input_proj_env_state(env_state)
+                hs = self.transformer(joint_embedding, None, self.query_embed.weight, self.pos.weight, latent_input, env_state, self.additional_pos_embed.weight)[6]
+            else:
+                joint_embedding = self.robotic_dynamic_encoder(qpos)
+                env_state = self.input_proj_env_state(env_state)
+                env_state = torch.unsqueeze(env_state, axis=1)
+                hs = self.transformer(env_state, None, self.query_embed.weight, self.pos.weight, latent_input, joint_embedding, self.additional_pos_embed.weight)[6]
         a_hat = self.action_head(hs)
         is_pad_hat = self.is_pad_head(hs)
         return a_hat, is_pad_hat, [mu, logvar]
+    
+def build_tgdm_vae(args):
+    if args["use_state"] and args["use_image"]:
+        print("Both state and image are used, please choose one of them")
+    
+    if args["use_state"]:
+        backbones = None
+    
+    if args["use_image"]:
+        backbones = []
+        backbone = build_backbone(args)
+        backbones.append(backbone)
+
+    transformer = build_transformer(args)
+
+    encoder = build_encoder(args)
+
+    model = TGDM_VAE(backbones, transformer, encoder, args)
+
+    n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print("number of parameters: %.2fM" % (n_parameters/1e6,))
+
+    return model
