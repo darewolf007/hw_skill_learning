@@ -76,7 +76,7 @@ class EpisodicDataset(torch.utils.data.Dataset):
         return image_data, qpos_data, action_data, is_pad
 
 class KitenchenDataset(torch.utils.data.Dataset):
-    def __init__(self,path_num = 40, episode_len=35, data_path = None, load_all_data = False, load_state_action = False, episode_ids = None):
+    def __init__(self,path_num = 40, episode_len=35, data_path = None, load_all_data = False, load_state_action = False, episode_ids = None, skip_data = None):
         super(KitenchenDataset).__init__()
         self.episode_len = episode_len
         self.episode_num = path_num
@@ -121,7 +121,7 @@ class KitenchenDataset(torch.utils.data.Dataset):
         self.episode_ids = episode_ids
         if episode_ids is not None:
             self.episode_num = len(episode_ids)
-
+        self.skip_data = skip_data
     def __len__(self):
         return self.episode_num
 
@@ -162,6 +162,13 @@ class KitenchenDataset(torch.utils.data.Dataset):
         action_data = (action_data - self.action_mean_value) / self.action_variance_value
         qpos_data = (qpos_data - self.qpos_mean_value) / self.qpos_variance_value
 
+        if self.skip_data is not None:
+            skip_state_data = self.state[index][start_ts + self.skip_data] if start_ts + self.skip_data < episode_len else self.state[index][-1]
+            skip_qpos_data = self.qpos[index][start_ts + self.skip_data] if start_ts + self.skip_data < episode_len else self.qpos[index][-1]
+            skip_qpos_data = (skip_qpos_data - self.qpos_mean_value) / self.qpos_variance_value
+            skip_state_data = torch.from_numpy(skip_state_data).float()
+            skip_qpos_data = torch.from_numpy(skip_qpos_data).float()
+            return state_data, qpos_data, action_data, is_pad, skip_state_data, skip_qpos_data
         return state_data, qpos_data, action_data, is_pad
 
 
@@ -228,8 +235,8 @@ def load_data(args_config, base_dir):
         train_dataset = KitenchenDataset(path_num = path_num, episode_len = episode_len, data_path = data_path, episode_ids= train_episode_ids)
         val_dataset = KitenchenDataset(path_num = path_num, episode_len = episode_len, data_path = data_path, episode_ids=val_episode_ids)
     elif args_config['task_name'] == "kitchen_one_task_allstep":
-        train_dataset = KitenchenDataset(path_num = path_num,episode_len=episode_len, data_path = data_path,load_all_data=True, load_state_action=True, episode_ids= train_episode_ids)
-        val_dataset = KitenchenDataset(path_num = path_num,episode_len=episode_len, data_path = data_path,load_all_data=True, load_state_action=True, episode_ids=val_episode_ids)
+        train_dataset = KitenchenDataset(path_num = path_num,episode_len=episode_len, data_path = data_path,load_all_data=True, load_state_action=True, episode_ids= train_episode_ids, skip_data=args_config['skip_data'])
+        val_dataset = KitenchenDataset(path_num = path_num,episode_len=episode_len, data_path = data_path,load_all_data=True, load_state_action=True, episode_ids=val_episode_ids, skip_data=args_config['skip_data'])
     elif args_config['task_name'] == "act_example":
         from simulation_mujoco.assets.act_example.constants import SIM_TASK_CONFIGS
         example_data_path = SIM_TASK_CONFIGS[args_config[args_config['task_name']]['dataset_name']]['dataset_dir']
@@ -239,6 +246,6 @@ def load_data(args_config, base_dir):
         return load_example_data(data_path, path_num, camera_names, args_config['train_batch_size'], args_config['val_batch_size'])
     else:
         raise ValueError("Please choose a valid task name")
-    train_dataloader = DataLoader(train_dataset, batch_size=args_config['train_batch_size'], shuffle=True, pin_memory=True, num_workers=1, prefetch_factor=1)
-    val_dataloader = DataLoader(val_dataset, batch_size=args_config['val_batch_size'], shuffle=True, pin_memory=True, num_workers=1, prefetch_factor=1)
+    train_dataloader = DataLoader(train_dataset, batch_size=args_config['train_batch_size'], shuffle=True, pin_memory=True, num_workers=1, prefetch_factor=1, drop_last=True)
+    val_dataloader = DataLoader(val_dataset, batch_size=args_config['val_batch_size'], shuffle=True, pin_memory=True, num_workers=1, prefetch_factor=1, drop_last=True)
     return train_dataloader, val_dataloader

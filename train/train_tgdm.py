@@ -87,10 +87,16 @@ def eval_bc(config, ckpt_name, save_episode=True):
    pass
 
 def forward_pass(data, policy):
-    env_data, qpos_data, action_data, is_pad = data
-    env_data, qpos_data, action_data, is_pad = env_data.cuda(), qpos_data.cuda(), action_data.cuda(), is_pad.cuda()
-    return policy(qpos_data, env_data, action_data, is_pad)
-
+    if len(data) == 4:
+        env_data, qpos_data, action_data, is_pad = data
+        env_data, qpos_data, action_data, is_pad = env_data.cuda(), qpos_data.cuda(), action_data.cuda(), is_pad.cuda()
+        return policy(qpos_data, env_data, action_data, is_pad)
+    elif len(data) == 6:
+        env_data, qpos_data, action_data, is_pad, skip_state_data, skip_qpos_data = data
+        env_data, qpos_data, action_data, is_pad, skip_state_data, skip_qpos_data = env_data.cuda(), qpos_data.cuda(), action_data.cuda(), is_pad.cuda(), skip_state_data.cuda(), skip_qpos_data.cuda()
+        return policy(qpos_data, env_data, action_data, is_pad, skip_state_data, skip_qpos_data)
+    else:
+        raise ValueError
 def train_bc(train_dataloader, val_dataloader, config):
     num_epochs = config['num_epochs']
     base_path = os.path.dirname(__file__)
@@ -152,7 +158,7 @@ def train_bc(train_dataloader, val_dataloader, config):
             if config['use_wandb']: 
                     logger.log_scalar_dict(forward_dict, prefix='train')
             # backward
-            loss = forward_dict['loss']
+            loss = forward_dict['new_loss']
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()

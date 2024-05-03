@@ -129,10 +129,10 @@ class TGDM_VAE(nn.Module):
             hs = self.transformer(src, None, self.query_embed.weight, pos, latent_input, proprio_input, self.additional_pos_embed.weight)[6]
         else:
             if self.use_robotic_dynamic:
-                self.base_xpos = self.base_xpos.repeat(bs, 1)
+                base_xpos = self.base_xpos.repeat(bs, 1)
                 joint_qpos_embed = torch.unsqueeze(qpos, axis=2)
                 joint_qpos_embed = self.encoder_joint_qpos_proj(joint_qpos_embed)  # (bs, joint_dim, hidden_dim)
-                joint_xqpos_embed = torch.unsqueeze(self.base_xpos, axis=1)  # (bs, 1, hidden_dim)
+                joint_xqpos_embed = torch.unsqueeze(base_xpos, axis=1)  # (bs, 1, hidden_dim)
                 joint_xqpos_embed = self.encoder_joint_xpos_proj(joint_xqpos_embed)
                 encoder_input = torch.cat([joint_xqpos_embed, joint_qpos_embed], axis=1) # (bs, seq+1, hidden_dim)
                 encoder_input = encoder_input.permute(1, 0, 2) # (seq+1, bs, hidden_dim)

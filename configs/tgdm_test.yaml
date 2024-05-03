@@ -3,7 +3,7 @@ use_image: false
 use_state: True
 onscreen_render: True
 task_name: "kitchen_one_task_allstep" # "kitchen_one_task" "kitchen_all_task" "kitchen_one_task_allstep" "act_example"
-use_wandb: True
+use_wandb: False
 
 #train
 num_epochs: 2000
@@ -27,6 +27,7 @@ dataset_name: ""
 episode_len: 0
 num_episodes: 0
 device: "cuda"
+skip_data: None
 
 #log
 plt: False
@@ -107,6 +108,7 @@ kitchen_one_task_allstep:
   WANDB_PROJECT_NAME: 'imitation_act_model_all_step'
   exp_name: 'kitchen_panda_act_all_step'
   env_dim: 30
+  skip_data: 40
 act_example:
   use_image: true
   use_state: false
