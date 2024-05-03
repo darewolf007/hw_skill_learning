@@ -121,7 +121,6 @@ class KitenchenDataset(torch.utils.data.Dataset):
         self.episode_ids = episode_ids
         if episode_ids is not None:
             self.episode_num = len(episode_ids)
-        self.__getitem__(0) # initialize self.is_sim
 
     def __len__(self):
         return self.episode_num

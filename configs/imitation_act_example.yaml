@@ -2,7 +2,7 @@
 use_image: false
 use_state: True
 onscreen_render: True
-task_name: "kitchen_all_task" # "kitchen_one_task" "kitchen_all_task" "kitchen_one_task_allstep" "act_example"
+task_name: "kitchen_one_task_allstep" # "kitchen_one_task" "kitchen_all_task" "kitchen_one_task_allstep" "act_example"
 use_wandb: True
 
 #train
@@ -91,6 +91,7 @@ kitchen_one_task_allstep:
   num_queries: 200
   WANDB_PROJECT_NAME: 'imitation_act_model_all_step'
   exp_name: 'kitchen_panda_act_all_step'
+  env_dim: 30
 act_example:
   use_image: true
   use_state: false

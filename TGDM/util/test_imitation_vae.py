@@ -32,6 +32,7 @@ class DETRVAE(nn.Module):
         self.is_pad_head = nn.Linear(hidden_dim, 1)
         self.query_embed = nn.Embedding(args["num_queries"], hidden_dim)
         if args["use_image"]:
+            raise ValueError("not implemented yet")
             self.input_proj = nn.Conv2d(backbones[0].num_channels, hidden_dim, kernel_size=1)
             self.backbones = nn.ModuleList(backbones)
             self.input_proj_robot_state = nn.Linear(args["joint_dim"], hidden_dim)
@@ -54,6 +55,11 @@ class DETRVAE(nn.Module):
         # decoder extra parameters
         self.latent_out_proj = nn.Linear(self.latent_dim, hidden_dim) # project latent sample to embedding
         self.additional_pos_embed = nn.Embedding(2, hidden_dim) # learned position embedding for proprio and latent
+
+    def reparametrize(self, mu, logvar):
+        std = logvar.div(2).exp()
+        eps = Variable(std.data.new(std.size()).normal_())
+        return mu + std * eps
 
     def forward(self, qpos, image, env_state, actions=None, is_pad=None):
         """
@@ -86,7 +92,7 @@ class DETRVAE(nn.Module):
             latent_info = self.latent_proj(encoder_output)
             mu = latent_info[:, :self.latent_dim]
             logvar = latent_info[:, self.latent_dim:]
-            latent_sample = reparametrize(mu, logvar)
+            latent_sample = self.reparametrize(mu, logvar)
             latent_input = self.latent_out_proj(latent_sample)
         else:
             mu = logvar = None
@@ -94,6 +100,7 @@ class DETRVAE(nn.Module):
             latent_input = self.latent_out_proj(latent_sample)
 
         if self.backbones is not None:
+            raise ValueError("not implemented yet")
             # Image observation features and position embeddings
             all_cam_features = []
             all_cam_pos = []
