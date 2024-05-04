@@ -1,5 +1,7 @@
 import cv2
 import numpy as np
+import torch
+from mpi4py import MPI
 
 class AttrDict(dict):
     __setattr__ = dict.__setitem__
@@ -96,3 +98,64 @@ def add_captions_to_seq(img_seq, info_seq, **kwargs):
     """Adds caption to sequence of image. info_seq is list of dicts with keys and text/array."""
     return [add_caption_to_img(img, info, name='Timestep {:03d}'.format(i), **kwargs) for i, (img, info) in enumerate(zip(img_seq, info_seq))]
 
+def _get_flat_params(network):
+    param_shape = {}
+    flat_params = None
+    for key_name, value in network.named_parameters():
+        param_shape[key_name] = value.cpu().detach().numpy().shape
+        if flat_params is None:
+            flat_params = value.cpu().detach().numpy().flatten()
+        else:
+            flat_params = np.append(flat_params, value.cpu().detach().numpy().flatten())
+    return flat_params, param_shape
+
+def _set_flat_params(network, params_shape, params):
+    pointer = 0
+    if hasattr(network, '_config'):
+        device = network._config.device
+    else:
+        device = torch.device("cpu")
+
+    for key_name, values in network.named_parameters():
+        # get the length of the parameters
+        len_param = int(np.prod(params_shape[key_name]))
+        copy_params = params[pointer:pointer + len_param].reshape(params_shape[key_name])
+        copy_params = torch.tensor(copy_params).to(device)
+        # copy the params
+        values.data.copy_(copy_params.data)
+        # update the pointer
+        pointer += len_param
+
+def sync_networks(network):
+    """
+    netowrk is the network you want to sync
+    """
+    comm = MPI.COMM_WORLD
+    flat_params, params_shape = _get_flat_params(network)
+    comm.Bcast(flat_params, root=0)
+    # set the flat params back to the network
+    _set_flat_params(network, params_shape, flat_params)
+
+class Schedule:
+    """Container for parameter schedules."""
+    def __init__(self, config):
+        self._hp = self._default_hparams().overwrite(config)
+
+    def _default_hparams(self):
+        return ParamDict({})
+
+    def __call__(self, t):
+        raise NotImplementedError()
+
+class ConstantSchedule(Schedule):
+    def __init__(self, config):
+        super().__init__(config)
+        self._p = self._hp.p
+
+    def _default_hparams(self):
+        return super()._default_hparams().overwrite(AttrDict(
+            p=None
+        ))
+
+    def __call__(self, t):
+        return self._p
