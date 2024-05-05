@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import torch
 from mpi4py import MPI
+from functools import partial, reduce
 
 class AttrDict(dict):
     __setattr__ = dict.__setitem__
@@ -26,7 +27,57 @@ class ParamDict(AttrDict):
             # print('overriding param {} to value {}'.format(param, new_params[param]))
             self.__setattr__(param, new_params[param])
         return self
+
+def make_recursive(fn, *argv, **kwargs):
+    """ Takes a fn and returns a function that can apply fn on tensor structure
+     which can be a single tensor, tuple or a list. """
     
+    def recursive_map(tensors):
+        if tensors is None:
+            return tensors
+        elif isinstance(tensors, list) or isinstance(tensors, tuple):
+            return type(tensors)(map(recursive_map, tensors))
+        elif isinstance(tensors, dict):
+            return type(tensors)(map_dict(recursive_map, tensors))
+        elif isinstance(tensors, torch.Tensor) or isinstance(tensors, np.ndarray):
+            return fn(tensors, *argv, **kwargs)
+        else:
+            try:
+                return fn(tensors, *argv, **kwargs)
+            except Exception as e:
+                print("The following error was raised when recursively applying a function:")
+                print(e)
+                raise ValueError("Type {} not supported for recursive map".format(type(tensors)))
+    
+    return recursive_map
+
+def map_recursive(fn, tensors):
+    return make_recursive(fn)(tensors)
+
+
+def map_recursive_list(fn, tensors):
+    return make_recursive_list(fn)(tensors)
+
+class RecursiveAverageMeter(object):
+    """Computes and stores the average and current value"""
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.val = None
+        self.avg = None
+        self.sum = None
+        self.count = 0
+
+    def update(self, val):
+        self.val = val
+        if self.sum is None:
+            self.sum = val
+        else:
+            self.sum = map_recursive_list(lambda x, y: x + y, [self.sum, val])
+        self.count += 1
+        self.avg = map_recursive(lambda x: x / self.count, self.sum)
+
 def prefix_dict(d, prefix):
     """Adds the prefix to all keys of dict d."""
     return type(d)({prefix+k: v for k, v in d.items()})
@@ -159,3 +210,33 @@ class ConstantSchedule(Schedule):
 
     def __call__(self, t):
         return self._p
+
+def listdict2dictlist(LD):
+    """ Converts a list of dicts to a dict of lists """
+    
+    # Take intersection of keys
+    keys = reduce(lambda x,y: x & y, (map(lambda d: d.keys(), LD)))
+    return AttrDict({k: [dic[k] for dic in LD] for k in keys})
+
+def make_recursive_list(fn):
+    """ Takes a fn and returns a function that can apply fn across tuples of tensor structures,
+     each of which can be a single tensor, tuple or a list. """
+
+    def recursive_map(tensors):
+        if tensors is None:
+            return tensors
+        elif isinstance(tensors[0], list) or isinstance(tensors[0], tuple):
+            return type(tensors[0])(map(recursive_map, zip(*tensors)))
+        elif isinstance(tensors[0], dict):
+            return map_dict(recursive_map, listdict2dictlist(tensors))
+        elif isinstance(tensors[0], torch.Tensor):
+            return fn(*tensors)
+        else:
+            try:
+                return fn(*tensors)
+            except Exception as e:
+                print("The following error was raised when recursively applying a function:")
+                print(e)
+                raise ValueError("Type {} not supported for recursive map".format(type(tensors)))
+
+    return recursive_map

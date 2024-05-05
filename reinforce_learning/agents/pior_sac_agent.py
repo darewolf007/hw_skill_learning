@@ -1,8 +1,8 @@
 import torch
 import numpy as np
 from sac_agent import SACAgent
-from reinforce_learning.util.helper import ParamDict, AttrDict, map_dict, sync_networks, ConstantSchedule
-from reinforce_learning.util.pytorch_utils import ten2ar, avg_grad_norm, TensorModule, check_shape, map2torch, map2np
+from reinforce_learning.util.helper import ParamDict, AttrDict, ConstantSchedule
+from reinforce_learning.util.pytorch_utils import check_shape
 
 class ActionPriorSACAgent(SACAgent):
     """Implements SAC with non-uniform, learned action / skill prior."""
