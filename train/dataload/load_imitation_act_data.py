@@ -162,7 +162,7 @@ class KitenchenDataset(torch.utils.data.Dataset):
         action_data = (action_data - self.action_mean_value) / self.action_variance_value
         qpos_data = (qpos_data - self.qpos_mean_value) / self.qpos_variance_value
 
-        if self.skip_data is not None:
+        if self.skip_data is not None and self.skip_data > 0:
             skip_state_data = self.state[index][start_ts + self.skip_data] if start_ts + self.skip_data < episode_len else self.state[index][-1]
             skip_qpos_data = self.qpos[index][start_ts + self.skip_data] if start_ts + self.skip_data < episode_len else self.qpos[index][-1]
             skip_qpos_data = (skip_qpos_data - self.qpos_mean_value) / self.qpos_variance_value

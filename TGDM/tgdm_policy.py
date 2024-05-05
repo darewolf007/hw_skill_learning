@@ -5,7 +5,7 @@ import torchvision.transforms as transforms
 import argparse
 from torch.nn import functional as F
 from imitation_learning.act_util.helper import kl_divergence
-from TGDM.util.test_tgdm_vae import build_tgdm_vae
+from TGDM.models.test_tgdm_vae import build_tgdm_vae
 
 def build_tgdm_model_and_optimizer(args):
     model = build_tgdm_vae(args)

@@ -72,7 +72,7 @@ class TGDM_VAE(nn.Module):
         eps = Variable(std.data.new(std.size()).normal_())
         return mu + std * eps
 
-    def forward(self, qpos, image, env_state, actions=None, is_pad=None):
+    def forward(self, qpos, image, env_state,goal_xpose = None, actions=None, is_pad=None):
         """
         qpos: batch, qpos_dim
         image: batch, num_cam, channel, height, width

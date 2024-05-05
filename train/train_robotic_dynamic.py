@@ -6,10 +6,10 @@ import os
 import numpy as np
 from tqdm import tqdm
 from copy import deepcopy
-from robot_dynamic.transformer_robot_dynamic import robot_dynamic
-from utils.helper import load_config, set_seed, compute_dict_mean, detach_dict, euclidean_distance
+from robot_dynamic.transformer_robot_dynamic import robot_dynamic, robot_dynamic_with_jointxpose
+from utils.helper import load_config, set_seed, compute_dict_mean, detach_dict, euclidean_distance, combined_loss
 from utils.process_log import plot_history, WandBLogger, AttrDict, setup_logging
-from train.dataload.load_robotic_dynamic_data import load_data
+from train.dataload.load_robotic_dynamic_data import load_data, load_alljoint_data
 from torch.nn import functional as F
 
 class Train_Policy(nn.Module):
@@ -20,22 +20,36 @@ class Train_Policy(nn.Module):
         self.optimizer = optimizer
         self.args = args
 
-    def __call__(self, joint_data, predict_gripper = True):
-        joint_qpose, end_effector_xpos, leftfinger_xpos, rightfinger_xpos, joint_base_xpose= joint_data
+    def __call__(self, joint_data, is_train, predict_gripper = False):
+        joint_qpose, end_effector_xpos, leftfinger_xpos, rightfinger_xpos, joint_base_xpose, joints_xpose= joint_data
         if self.args['device'] == 'cuda':
             joint_qpose = joint_qpose.cuda()
             end_effector_xpos = end_effector_xpos.cuda()
             leftfinger_xpos = leftfinger_xpos.cuda()
             rightfinger_xpos = rightfinger_xpos.cuda()
             joint_base_xpose = joint_base_xpose.cuda()
-        end_positions_result = self.model(joint_qpose, joint_base_xpose)
+            joints_xpose = joints_xpose.cuda()
+        if is_train:
+            end_positions_result = self.model(joint_qpose, joint_base_xpose, joints_xpose[:,1:])
+        else:
+            end_positions_result = self.model(joint_qpose, joint_base_xpose)
         loss_dict = dict()
-        for joint_id in range(self.args['joint_dim'] + 1):
+        joint_target = joints_xpose
+        for joint_id in range(1, self.args['joint_dim'] + 1):
             joint_name = ''
-            if joint_id <= self.args['joint_dim'] - self.args['gripper_dim']:
+            if joint_id < self.args['joint_dim'] - self.args['gripper_dim']:
                 joint_name = 'joint_' + str(joint_id) if joint_id != 0 else 'joint_base'
-                joint_predict_end_positions = end_positions_result[:, joint_id]
-                predict_end_positions_loss = torch.mean(euclidean_distance(joint_predict_end_positions, end_effector_xpos))
+                pred_quaternion = end_positions_result[:,joint_id,3:]
+                traget_quaternion = joint_target[:,joint_id,3:]
+                pred_position = end_positions_result[:,joint_id,:3]
+                traget_position = joint_target[:,joint_id,:3]
+                pred_joint_loss = combined_loss(pred_quaternion, traget_quaternion, pred_position, traget_position)
+                loss_dict[joint_name] = pred_joint_loss
+            elif joint_id == self.args['joint_dim'] - self.args['gripper_dim']:
+                joint_name = 'joint_' + str(joint_id) if joint_id != 0 else 'joint_base'
+                pred_position = end_positions_result[:,joint_id,:3]
+                predict_end_positions_loss = torch.mean(euclidean_distance(pred_position, end_effector_xpos))
+                loss_dict[joint_name] = predict_end_positions_loss
             elif predict_gripper:
                 if joint_id == self.args['joint_dim'] - self.args['gripper_dim'] + 1:
                     joint_name = 'grapper_left'
@@ -47,18 +61,21 @@ class Train_Policy(nn.Module):
                     predict_end_positions_loss = torch.mean(euclidean_distance(gripper_predict_end_positions, rightfinger_xpos))
             else:
                 continue
-            loss_dict[joint_name] = predict_end_positions_loss
         if predict_gripper:
             loss_dict['loss'] = torch.mean(sum([loss_dict[joint_name] for joint_name in loss_dict if 'joint' in joint_name]))
         else:
             loss_dict['loss'] = torch.mean(sum([loss_dict[joint_name] for joint_name in loss_dict]))
         return loss_dict
 
+    
     def configure_optimizers(self):
         return self.optimizer
 
     def build_model_and_optimizer(self, args):
-        model = robot_dynamic(args)
+        if args['all_joints_predict']:
+            model = robot_dynamic_with_jointxpose(args)
+        else:
+            model = robot_dynamic(args)
         model.cuda()
         param_dicts = [{"params": [p for n, p in model.named_parameters() if p.requires_grad]},]
         optimizer = torch.optim.AdamW(param_dicts, lr=args["lr"], weight_decay=args["weight_decay"])
@@ -76,7 +93,10 @@ def get_dataloader(args_config):
     current_directory = os.path.dirname(__file__)
     train_path = os.path.join(current_directory, args_config['data_dict_train_path'])
     val_path = os.path.join(current_directory, args_config['data_dict_val_path'])
-    train_dataloader, val_dataloader = load_data(train_path, val_path, args_config['train_batch_size'], args_config['val_batch_size'], args_config['joint_base_xpose'], sample_terminal=args_config['sample_terminal'])
+    if args_config['all_joints_predict']:
+        train_dataloader, val_dataloader = load_alljoint_data(train_path, val_path, args_config['train_batch_size'], args_config['val_batch_size'], args_config['joint_base_xpose'], sample_terminal=args_config['sample_terminal'])
+    else:
+        train_dataloader, val_dataloader = load_data(train_path, val_path, args_config['train_batch_size'], args_config['val_batch_size'], args_config['joint_base_xpose'], sample_terminal=args_config['sample_terminal'])
     return train_dataloader, val_dataloader
 
 def init_model(args_config):
@@ -109,7 +129,7 @@ def train_model(args):
             policy.eval()
             epoch_dicts = []
             for batch_idx, data in enumerate(val_dataloader):
-                forward_dict = policy(data)
+                forward_dict = policy(data, is_train=False)
                 epoch_dicts.append(forward_dict)
                 if args.use_wandb: 
                     logger.log_scalar_dict(forward_dict, prefix='val')
@@ -133,7 +153,7 @@ def train_model(args):
         policy.train()
         optimizer.zero_grad()
         for batch_idx, data in enumerate(train_dataloader):
-            forward_dict = policy(data)
+            forward_dict = policy(data,is_train=True)
             # backward
             loss = forward_dict['loss']
             loss.backward()

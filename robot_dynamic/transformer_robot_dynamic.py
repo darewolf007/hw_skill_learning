@@ -11,10 +11,10 @@ class robot_dynamic_with_jointxpose(nn.Module):
         self.joint_dim = args["joint_dim"]
         self.register_buffer('pos_table', build_transformer.get_sinusoid_encoding_table(1+args["joint_dim"], args["hidden_dim"])) 
         self.encoder_joint_qpos_proj = nn.Linear(1, args["hidden_dim"])  # project qpos to embedding
-        self.encoder_joint_xpos_proj = nn.Linear(3, args["hidden_dim"])  # project xpos to embedding
-        self.decoder_joint_xpos_proj = nn.Linear(3, args["hidden_dim"])  # project xpos to embedding
+        self.encoder_joint_xpos_proj = nn.Linear(7, args["hidden_dim"])  # project xpos to embedding
+        self.decoder_joint_xpos_proj = nn.Linear(7, args["hidden_dim"])  # project xpos to embedding
         self.encoder = build_transformer.build_encoder(args)
-        self.xpos_decoders = nn.ModuleList([nn.Linear(args["hidden_dim"]*2, 3) for _ in range(self.joint_dim)])
+        self.xpos_decoders = nn.ModuleList([nn.Linear(args["hidden_dim"]*2, 7) for _ in range(self.joint_dim - self.gripper_dim)])
 
 
     def forward(self, joint_qpos, joint0_xpos, joint_xpos = None):
@@ -33,7 +33,9 @@ class robot_dynamic_with_jointxpose(nn.Module):
         decoded_positions = [joint0_xpos]
         for joint_id, decoder in enumerate(self.xpos_decoders):
             if is_training:
-                assert joint_xpos.shape[1] == self.joint_dim + 1
+                joint0_xpose_update = torch.unsqueeze(joint0_xpos, axis=1)
+                joint_xpos = torch.concatenate([joint0_xpose_update, joint_xpos], axis=1)
+                # assert joint_xpos.shape[1] == self.joint_dim + 1
                 if joint_id < self.joint_dim - self.gripper_dim:
                     joint_id_embedding = joint_embedding[:, joint_id, :]
                     joint_id_xpos = joint_xpos[:, joint_id, :]
@@ -42,12 +44,13 @@ class robot_dynamic_with_jointxpose(nn.Module):
                     decoded_position = decoder(joint_input.reshape(bs, -1))
                     decoded_positions.append(decoded_position)
                 else:
-                    joint_id_xpos = joint_xpos[:, self.joint_dim - self.gripper_dim, :]
-                    joint_xpos_embedding = self.decoder_joint_xpos_proj(joint_id_xpos)
-                    joint_gripper_embedding = joint_embedding[:, joint_id, :]
-                    joint_gripper_input = torch.cat([joint_xpos_embedding, joint_gripper_embedding], axis=1)
-                    decoded_position = decoder(joint_gripper_input.reshape(bs, -1))
-                    decoded_positions.append(decoded_position)
+                    # joint_id_xpos = joint_xpos[:, self.joint_dim - self.gripper_dim, :]
+                    # joint_xpos_embedding = self.decoder_joint_xpos_proj(joint_id_xpos)
+                    # joint_gripper_embedding = joint_embedding[:, joint_id, :]
+                    # joint_gripper_input = torch.cat([joint_xpos_embedding, joint_gripper_embedding], axis=1)
+                    # decoded_position = decoder(joint_gripper_input.reshape(bs, -1))
+                    # decoded_positions.append(decoded_position)
+                    pass
             else:
                 if joint_id < self.joint_dim - self.gripper_dim:
                     joint_id_embedding = joint_embedding[:, joint_id, :]
@@ -57,12 +60,13 @@ class robot_dynamic_with_jointxpose(nn.Module):
                     decoded_position = decoder(joint_input.reshape(bs, -1))
                     decoded_positions.append(decoded_position)
                 else:
-                    joint_id_xpos = decoded_positions[self.joint_dim - self.gripper_dim]
-                    joint_xpos_embedding = self.decoder_joint_xpos_proj(joint_id_xpos)
-                    joint_gripper_embedding = joint_embedding[:, joint_id, :]
-                    joint_gripper_input = torch.cat([joint_xpos_embedding, joint_gripper_embedding], axis=1)
-                    decoded_position = decoder(joint_gripper_input.reshape(bs, -1))
-                    decoded_positions.append(decoded_position)
+                    # joint_id_xpos = decoded_positions[self.joint_dim - self.gripper_dim]
+                    # joint_xpos_embedding = self.decoder_joint_xpos_proj(joint_id_xpos)
+                    # joint_gripper_embedding = joint_embedding[:, joint_id, :]
+                    # joint_gripper_input = torch.cat([joint_xpos_embedding, joint_gripper_embedding], axis=1)
+                    # decoded_position = decoder(joint_gripper_input.reshape(bs, -1))
+                    # decoded_positions.append(decoded_position)
+                    pass
         decoded_positions = torch.stack(decoded_positions, dim=1)
         return decoded_positions
 
