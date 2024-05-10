@@ -21,9 +21,10 @@ save_log_path: '../logs/robot_dynamic_model'
 sample_terminal: 40
 
 # wandb
-WANDB_PROJECT_NAME: 'robotic_dynamic_model'
+WANDB_PROJECT_NAME: 'robotic_dynamic_model_all'
 WANDB_ENTITY_NAME: 'sun1599895936'
-exp_name: 'kitchen_panda_robotic_dynamic'
+exp_name: 'kitchen_panda_robotic_dynamic_all'
+prefix_name: True
 
 # Robot
 robot_name: panda_franka

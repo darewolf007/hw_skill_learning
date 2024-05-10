@@ -123,3 +123,29 @@ def combined_loss(quaternion1, quaternion2, position1, position2, angle_weight=0
         combined_loss += (1.0 - angle_weight) * angle_loss_val + angle_weight * position_loss_val
     combined_loss /= quaternion1.shape[0]
     return combined_loss
+
+def list_files_in_directory(directory):
+    path_list = []
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            path_list.append(os.path.join(root, file))
+        for subdir in dirs:
+            path_list.append(os.path.join(root, subdir))
+    return path_list
+
+class AttrDict(dict):
+    __setattr__ = dict.__setitem__
+
+    def __getattr__(self, attr):
+        # Take care that getattr() raises AttributeError, not KeyError.
+        # Required e.g. for hasattr(), deepcopy and OrderedDict.
+        try:
+            return self.__getitem__(attr)
+        except KeyError:
+            raise AttributeError("Attribute %r not found" % attr)
+
+    def __getstate__(self):
+        return self
+
+    def __setstate__(self, d):
+        self = d

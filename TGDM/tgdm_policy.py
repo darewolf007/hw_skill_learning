@@ -37,16 +37,13 @@ class TGDMPolicy(nn.Module):
         self.mode = "image" if args['use_image'] else "state"
         self.num_queries = args['num_queries']
         self.skip_step = args['skip_data']
-        print(f'KL Weight {self.kl_weight}')
 
     def __call__(self, qpos, env_data, actions=None, is_pad=None, skip_state_data=None, skip_qpos_data=None):
         if self.mode == "state":
             image = None
             env_state = env_data
         else:
-            env_state = None
-            normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-            image = normalize(env_data)
+            raise ValueError("not implemented yet")
 
         if actions is not None: # training time
             actions = actions[:, :self.model.num_queries]

@@ -1,7 +1,7 @@
 import os
 import torch
 import torch.nn as nn
-from TGDM.util.help import ParamDict, AttrDict
+from TGDM.util.helper import ParamDict, AttrDict
 from contextlib import contextmanager
 
 class BaseModel(nn.Module):
