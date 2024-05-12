@@ -3,7 +3,8 @@ import torch
 import numpy as np
 import os
 import argparse
-from utils.helper import load_config, set_seed, compute_dict_mean, detach_dict, check_and_create_dir, args_overwrite_config
+from utils.helper import load_config, set_seed, compute_dict_mean, check_and_create_dir, args_overwrite_config
+from utils.general_utils import detach_dict
 from utils.process_log import setup_logging
 def get_args_parser():
     parser = argparse.ArgumentParser('Set base param', add_help=False)

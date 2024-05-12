@@ -6,7 +6,8 @@ import csv
 import random
 import pickle
 from torch.utils.data import TensorDataset, DataLoader
-from utils.helper import read_pickle, list_files_in_directory, AttrDict
+from utils.helper import read_pickle, list_files_in_directory
+from utils.general_class import AttrDict
 
 class KitenchenDataset(torch.utils.data.Dataset):
     def __init__(self, episode_len = 100, data_path = None, skip_data = None):

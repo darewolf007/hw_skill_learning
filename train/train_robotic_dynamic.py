@@ -7,10 +7,12 @@ import numpy as np
 from tqdm import tqdm
 from copy import deepcopy
 from robot_dynamic.transformer_robot_dynamic import robot_dynamic, robot_dynamic_with_jointxpose
-from utils.helper import load_config, set_seed, compute_dict_mean, detach_dict, euclidean_distance, combined_loss
+from utils.helper import load_config, set_seed, compute_dict_mean, euclidean_distance
 from utils.process_log import plot_history, WandBLogger, AttrDict, setup_logging
 from train.dataload.load_robotic_dynamic_data import load_data, load_alljoint_data
 from torch.nn import functional as F
+from utils.general_utils import detach_dict
+from utils.loss import combined_loss
 
 class Train_Policy(nn.Module):
     def __init__(self, args):

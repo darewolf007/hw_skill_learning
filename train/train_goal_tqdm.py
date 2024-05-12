@@ -8,10 +8,11 @@ from torch import nn
 from copy import deepcopy
 from tqdm import tqdm
 from einops import rearrange
-from utils.helper import load_config, set_seed, compute_dict_mean, detach_dict, check_and_create_dir, args_overwrite_config
+from utils.helper import load_config, set_seed, compute_dict_mean, check_and_create_dir, args_overwrite_config
 from utils.process_log import plot_history, WandBLogger, AttrDict, setup_logging
 from TGDM.models.goal_tqdm_vae import Goal_TGDM_VAE
 from dataload.load_goal_tqdm_data import load_data
+from utils.general_utils import detach_dict
 
 def build_tgdm_model_and_optimizer(args):
     model = Goal_TGDM_VAE(args)

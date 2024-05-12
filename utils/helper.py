@@ -2,9 +2,9 @@ import yaml
 import pickle
 import torch
 import numpy as np
-import collections
 import csv
 import os
+from utils.general_utils import map_dict, listdict2dictlist
 
 def load_config(config_file):
     with open(config_file, 'r') as f:
@@ -29,27 +29,6 @@ def compute_dict_mean(epoch_dicts):
             value_sum += epoch_dict[k]
         result[k] = value_sum / num_items
     return result
-
-def detach_dict(d):
-    new_d = dict()
-    for k, v in d.items():
-        new_d[k] = v.detach()
-    return new_d
-
-def flatten_dict(d, parent_key='', sep='_'):
-    items = []
-    for k, v in d.items():
-        new_key = parent_key + sep + k if parent_key else k
-        if isinstance(v, collections.MutableMapping):
-            items.extend(flatten_dict(v, new_key, sep=sep).items())
-        else:
-            items.append((new_key, v))
-    return dict(items)
-
-
-def prefix_dict(d, prefix):
-    """Adds the prefix to all keys of dict d."""
-    return type(d)({prefix+k: v for k, v in d.items()})
 
 def euclidean_distance(tensor1, tensor2):
     """
@@ -83,47 +62,6 @@ def args_overwrite_config(base_config):
             base_config[key] = value
     return base_config
 
-def quaternion_to_rotation_matrix(quaternion):
-    """
-    将四元数表示的旋转角度转换为旋转矩阵
-    """
-    w, x, y, z = quaternion
-    rotation_matrix = torch.tensor([
-        [1 - 2*y**2 - 2*z**2, 2*x*y - 2*z*w, 2*x*z + 2*y*w],
-        [2*x*y + 2*z*w, 1 - 2*x**2 - 2*z**2, 2*y*z - 2*x*w],
-        [2*x*z - 2*y*w, 2*y*z + 2*x*w, 1 - 2*x**2 - 2*y**2]
-    ], device=quaternion.device)  # 将旋转矩阵分配到与四元数相同的设备上
-    return rotation_matrix
-
-def angle_loss(quaternion1, quaternion2):
-    """
-    计算两个四元数之间的角度损失
-    """
-    rotation_matrix1 = quaternion_to_rotation_matrix(quaternion1)
-    rotation_matrix2 = quaternion_to_rotation_matrix(quaternion2)
-    dot_product = torch.trace(torch.matmul(rotation_matrix1, torch.transpose(rotation_matrix2, 0, 1)))
-    cosine_similarity = dot_product / 3.0
-    angle = torch.acos(torch.clamp(cosine_similarity, -1.0 + 1e-7, 1.0 - 1e-7))
-    return angle
-
-def position_loss(position1, position2):
-    """
-    计算两个位置向量之间的位置损失
-    """
-    return torch.norm(position1 - position2)
-
-def combined_loss(quaternion1, quaternion2, position1, position2, angle_weight=0.5):
-    """
-    计算结合了角度和位置的损失函数
-    """
-    combined_loss = 0.0
-    for bs in range(quaternion1.shape[0]):
-        angle_loss_val = angle_loss(quaternion1[bs], quaternion2[bs])
-        position_loss_val = position_loss(position1[bs], position2[bs])
-        combined_loss += (1.0 - angle_weight) * angle_loss_val + angle_weight * position_loss_val
-    combined_loss /= quaternion1.shape[0]
-    return combined_loss
-
 def list_files_in_directory(directory):
     path_list = []
     for root, dirs, files in os.walk(directory):
@@ -133,19 +71,54 @@ def list_files_in_directory(directory):
             path_list.append(os.path.join(root, subdir))
     return path_list
 
-class AttrDict(dict):
-    __setattr__ = dict.__setitem__
+def make_recursive_list(fn):
+    """ Takes a fn and returns a function that can apply fn across tuples of tensor structures,
+     each of which can be a single tensor, tuple or a list. """
 
-    def __getattr__(self, attr):
-        # Take care that getattr() raises AttributeError, not KeyError.
-        # Required e.g. for hasattr(), deepcopy and OrderedDict.
-        try:
-            return self.__getitem__(attr)
-        except KeyError:
-            raise AttributeError("Attribute %r not found" % attr)
+    def recursive_map(tensors):
+        if tensors is None:
+            return tensors
+        elif isinstance(tensors[0], list) or isinstance(tensors[0], tuple):
+            return type(tensors[0])(map(recursive_map, zip(*tensors)))
+        elif isinstance(tensors[0], dict):
+            return map_dict(recursive_map, listdict2dictlist(tensors))
+        elif isinstance(tensors[0], torch.Tensor):
+            return fn(*tensors)
+        else:
+            try:
+                return fn(*tensors)
+            except Exception as e:
+                print("The following error was raised when recursively applying a function:")
+                print(e)
+                raise ValueError("Type {} not supported for recursive map".format(type(tensors)))
 
-    def __getstate__(self):
-        return self
+    return recursive_map
 
-    def __setstate__(self, d):
-        self = d
+def map_recursive_list(fn, tensors):
+    return make_recursive_list(fn)(tensors)
+
+def make_recursive(fn, *argv, **kwargs):
+    """ Takes a fn and returns a function that can apply fn on tensor structure
+     which can be a single tensor, tuple or a list. """
+    
+    def recursive_map(tensors):
+        if tensors is None:
+            return tensors
+        elif isinstance(tensors, list) or isinstance(tensors, tuple):
+            return type(tensors)(map(recursive_map, tensors))
+        elif isinstance(tensors, dict):
+            return type(tensors)(map_dict(recursive_map, tensors))
+        elif isinstance(tensors, torch.Tensor) or isinstance(tensors, np.ndarray):
+            return fn(tensors, *argv, **kwargs)
+        else:
+            try:
+                return fn(tensors, *argv, **kwargs)
+            except Exception as e:
+                print("The following error was raised when recursively applying a function:")
+                print(e)
+                raise ValueError("Type {} not supported for recursive map".format(type(tensors)))
+    
+    return recursive_map
+
+def map_recursive(fn, tensors):
+    return make_recursive(fn)(tensors)
