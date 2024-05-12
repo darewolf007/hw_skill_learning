@@ -143,13 +143,14 @@ class Goal_TGDM_VAE(BaseModel):
         return model_output
     
     def val_mode(self, inputs):
-        qpos = inputs['qpos']
-        env_state = inputs['env_state']
-        bs, _ = qpos.shape
-        mu = logvar = None
-        latent_sample = torch.zeros([bs, self._hp["latent_dim"]], dtype=torch.float32).to(qpos.device)
-        latent_input = self.latent_out_proj(latent_sample)
-        self.decode(qpos, env_state, latent_input)
+        print("not implemented yet")
+        # qpos = inputs['qpos']
+        # env_state = inputs['env_state']
+        # bs, _ = qpos.shape
+        # mu = logvar = None
+        # latent_sample = torch.zeros([bs, self._hp["latent_dim"]], dtype=torch.float32).to(qpos.device)
+        # latent_input = self.latent_out_proj(latent_sample)
+        # self.decode(qpos, env_state, latent_input)
     
     def encode(self, inputs):
         qpos = inputs['qpos']
@@ -206,19 +207,16 @@ class Goal_TGDM_VAE(BaseModel):
         now_state_object = inputs['env_state']
         now_state_goal = inputs['env_goal']
         now_state_endeffector = inputs['endeffector_xpose']
-        now_state_action = inputs['hl_actions']
 
         prior_qpos_embed = self.prior_proj_robot_state(now_state_robot)
         prior_env_state = self.prior_proj_env_state(now_state_object)
         prior_goal_state = self.prior_proj_env_state(now_state_goal).detach()
-        prior_action_embed = self.prior_proj_action(now_state_action)
         prior_endeffector_embed = self.prior_proj_endeffector(now_state_endeffector)
         prior_qpos_embed = torch.unsqueeze(prior_qpos_embed, axis=1)
         prior_env_state = torch.unsqueeze(prior_env_state, axis=1)
         prior_goal_state = torch.unsqueeze(prior_goal_state, axis=1)
-        prior_action_embed = torch.unsqueeze(prior_action_embed, axis=1)
         prior_endeffector_embed = torch.unsqueeze(prior_endeffector_embed, axis=1)
-        prior_encoder_input = torch.cat([prior_goal_state, prior_qpos_embed, prior_env_state, prior_action_embed, prior_endeffector_embed], axis=1)
+        prior_encoder_input = torch.cat([prior_goal_state, prior_qpos_embed, prior_env_state, prior_endeffector_embed], axis=1)
         prior_encoder_input = prior_encoder_input.permute(1, 0, 2)
         pos_embed = self.hl_pos_table.clone().detach()
         pos_embed = pos_embed.permute(1, 0, 2)
@@ -262,12 +260,43 @@ class Goal_TGDM_VAE(BaseModel):
         return loss_dict
     
     def _compute_learned_prior(self, inputs, first_only=False):
-        pass
+        now_state_robot = inputs[:, :9]
+        now_state_object = inputs[:, :30]
+        now_state_goal = inputs[:, 30:60]
+        now_state_endeffector = inputs['endeffector_xpose']
+
+        prior_qpos_embed = self.prior_proj_robot_state(now_state_robot)
+        prior_env_state = self.prior_proj_env_state(now_state_object)
+        prior_goal_state = self.prior_proj_env_state(now_state_goal).detach()
+        prior_endeffector_embed = self.prior_proj_endeffector(now_state_endeffector)
+        prior_qpos_embed = torch.unsqueeze(prior_qpos_embed, axis=1)
+        prior_env_state = torch.unsqueeze(prior_env_state, axis=1)
+        prior_goal_state = torch.unsqueeze(prior_goal_state, axis=1)
+        prior_endeffector_embed = torch.unsqueeze(prior_endeffector_embed, axis=1)
+        prior_encoder_input = torch.cat([prior_goal_state, prior_qpos_embed, prior_env_state, prior_endeffector_embed], axis=1)
+        prior_encoder_input = prior_encoder_input.permute(1, 0, 2)
+        pos_embed = self.hl_pos_table.clone().detach()
+        pos_embed = pos_embed.permute(1, 0, 2)
+        prior_infer_encoder_output = self.prior_encoder(prior_encoder_input, pos=pos_embed)[0]
+        prior_infer_latent_info = self.prior_latent_proj(prior_infer_encoder_output)
+        return MultivariateGaussian(prior_infer_latent_info)
     
     def compute_learned_prior(self, inputs, first_only=False):
-        pass
-        # return MultivariateGaussian(prior_mdl(inputs))
+        return self._compute_learned_prior(inputs, first_only)
     
+    def decoder(self, input_feature):
+        env_inputs = AttrDict()
+        qpos = input_feature[:, :9]
+        env_state = input_feature[:, :30]
+        latent_input = input_feature[:, 60:]
+        env_inputs['qpos'] = qpos
+        env_inputs['env_state'] = env_state
+        hs = self.decode(env_inputs, latent_input)
+        action = self.action_head(hs)
+        return action
+    
+    def run(self, inputs, use_learned_prior=True):
+        print("not implemented yet")
 
 if __name__ == "__main__":
     import yaml

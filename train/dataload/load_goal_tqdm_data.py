@@ -4,9 +4,9 @@ import os
 import h5py
 import csv
 import random
+import pickle
 from torch.utils.data import TensorDataset, DataLoader
 from utils.helper import read_pickle, list_files_in_directory, AttrDict
-
 
 class KitenchenDataset(torch.utils.data.Dataset):
     def __init__(self, episode_len = 100, data_path = None, skip_data = None):
@@ -26,6 +26,16 @@ class KitenchenDataset(torch.utils.data.Dataset):
         self.state_variance_value = np.var(self.states, axis=0, dtype=np.float32)
         self.end_effector_xpos_mean_value = np.mean(self.end_effector_xpos, axis=0, dtype=np.float32)
         self.end_effector_xpos_variance_value = np.var(self.end_effector_xpos, axis=0, dtype=np.float32)
+        dataset_dict = {}
+        dataset_dict['action_mean_value'] = self.action_mean_value
+        dataset_dict['action_variance_value'] = self.action_variance_value
+        dataset_dict['state_mean_value'] = self.state_mean_value
+        dataset_dict['state_variance_value'] = self.state_variance_value
+        dataset_dict['end_effector_xpos_mean_value'] = self.end_effector_xpos_mean_value
+        dataset_dict['end_effector_xpos_variance_value'] = self.end_effector_xpos_variance_value
+        file_name = "dataset.pkl"
+        with open(file_name, 'wb') as f:
+                pickle.dump(dataset_dict, f)
         self.sample_full_episode = False
         self.skip_data = skip_data
     def __len__(self):

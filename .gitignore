@@ -9,7 +9,7 @@ _wandb
 ./video
 video
 pretrain_model
-
+*.pkl
 # C extensions
 *.so
 

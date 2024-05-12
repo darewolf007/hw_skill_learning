@@ -3,7 +3,7 @@ use_image: false
 use_state: True
 onscreen_render: True
 task_name: "goal_tgdm_kitchen_panda" # "kitchen_one_task" "kitchen_all_task" "kitchen_one_task_allstep" "act_example"
-use_wandb: True
+use_wandb: false
 
 #train
 num_epochs: 20000
@@ -71,7 +71,7 @@ env_dim: 30
 goal_dim: 30
 endeffector_dim: 3
 hl_action_dim: 3
-hl_env_pos_dim: 5
+hl_env_pos_dim: 4
 
 
 # Mujoco simulator
@@ -104,7 +104,7 @@ goal_tgdm_kitchen_panda:
   dataset_dir: "../data/kitchen_all_data/"
   episode_len: 270
   num_episodes: 601
-  num_queries: 100
+  num_queries: 200
   WANDB_PROJECT_NAME: 'goal_tgdm_model'
   exp_name: 'kitchen_panda_tgdm'
   env_dim: 30
