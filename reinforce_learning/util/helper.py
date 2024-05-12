@@ -78,10 +78,6 @@ class RecursiveAverageMeter(object):
         self.count += 1
         self.avg = map_recursive(lambda x: x / self.count, self.sum)
 
-def prefix_dict(d, prefix):
-    """Adds the prefix to all keys of dict d."""
-    return type(d)({prefix+k: v for k, v in d.items()})
-
 def map_dict(fn, d):
     """takes a dictionary and applies the function to every element"""
     return type(d)(map(lambda kv: (kv[0], fn(kv[1])), d.items()))
