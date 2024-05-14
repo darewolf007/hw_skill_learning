@@ -1,0 +1,12 @@
+env_name: kitchen_franka
+action_dim: 9
+robotic_joint_dims: 9
+obs_dim: 30
+camera_names: ['angle']
+max_reward: 4
+max_episode_steps: 1000000
+show_episode: True
+xml_path: xml_path
+step_time: 40
+DT: 0.08
+episode_task: ['bottom_burner', 'top_burner', 'light_switch', 'slide_cabinet', 'hinge_cabinet', 'microwave', 'kettle']

@@ -28,6 +28,7 @@ num_episodes: 0
 device: "cuda"
 skip_data: null
 nll_prior_train: False
+load_all_episode: False
 
 #log
 plt: False
@@ -109,3 +110,4 @@ goal_tgdm_kitchen_panda:
   exp_name: 'kitchen_panda_tgdm'
   env_dim: 30
   skip_data: null
+  load_all_episode: true

@@ -2,7 +2,7 @@
 use_image: false
 use_state: True
 onscreen_render: True
-task_name: "kitchen_one_task_allstep" # "kitchen_one_task" "kitchen_all_task" "kitchen_one_task_allstep" "act_example"
+task_name: "goal_tgdm_kitchen_panda" # "kitchen_one_task" "kitchen_all_task" "kitchen_one_task_allstep" "act_example"
 use_wandb: False
 
 #train
@@ -40,7 +40,7 @@ nheads: 8
 dim_feedforward: 3200
 enc_layers: 4
 dec_layers: 7
-pre_norm: true
+pre_norm: false
 activation: "relu"
 
 #backbone 
@@ -64,10 +64,34 @@ chunk_size: 100
 temporal_agg: true
 
 # Mujoco simulator
-DT: 0.02
-camera_names: ['top']
-
+env_name: kitchen_franka
+action_dim: 9
+robotic_joint_dims: 9
+obs_dim: 30
+camera_names: ['angle']
+max_reward: 4
+max_episode_steps: 1000
+time_limit: 1000
+show_episode: True
+xml_path: "/home/haowen/hw_RL_code/hw_kitchen/kitchen_panda/adept_envs/franka/assets/franka_kitchen_jntpos_act_ab.xml"
+step_time: 40
+DT: 0.08
+episode_task: ['bottom_burner', 'top_burner', 'light_switch', 'slide_cabinet', 'hinge_cabinet', 'microwave', 'kettle']
+# start_arm_pose: [ 0.08228624, -1.76192224,  1.90784073, -2.48633218,  0.2495297 , 0.77931088,  1.72388411,  0.04192284,  0.03091825]
+start_arm_pose: [-1.03190839, -1.7724148,   1.85066068, -1.60317659, -0.56895769,  1.27451515,  2.30460405,  0.0339087,   0.03126218]
 #subtask rewritting params
+goal_tgdm_kitchen_panda:
+  dataset_dir: "../data/kitchen_all_data/"
+  episode_len: 300
+  num_episodes: 601
+  num_queries: 20 #250
+  WANDB_PROJECT_NAME: 'spirl_RL'
+  exp_name: 'kitchen_panda_act'
+  env_dim: 30
+  skip_data: null
+  load_all_episode: true
+  num_rollouts: 5
+  num_epochs: 20000
 kitchen_one_task:
   dataset_dir: "../data/imitation/kitchen/"
   dataset_name: "begin to microwave.csv"

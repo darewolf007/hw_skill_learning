@@ -1,9 +1,11 @@
 import yaml
 import pickle
 import torch
-import numpy as np
 import csv
 import os
+import cv2
+import numpy as np
+from einops import rearrange
 from utils.general_utils import map_dict, listdict2dictlist
 
 def load_config(config_file):
@@ -49,6 +51,20 @@ def read_dict_with_twodim_numpy_to_csv(filename):
                 value = np.array(eval(value_str))
                 read_data_dict[key].append(value)
     return read_data_dict
+
+def read_csv_with_numpy_to_dict(filename):
+    data = {}
+    with open(filename, 'r') as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            for key, value in row.items():
+                if key not in data:
+                    data[key] = []
+                if value:
+                    data[key].append(np.array(value.split(','), dtype=np.float32))
+                else:
+                    data[key].append(np.array([]))
+    return data
 
 def check_and_create_dir(dir_path):
     if not os.path.isdir(dir_path):
@@ -122,3 +138,49 @@ def make_recursive(fn, *argv, **kwargs):
 
 def map_recursive(fn, tensors):
     return make_recursive(fn)(tensors)
+
+def save_videos(video, dt, video_path=None):
+    if isinstance(video, list):
+        cam_names = list(video[0].keys())
+        h, w, _ = video[0][cam_names[0]].shape
+        w = w * len(cam_names)
+        fps = int(1/dt)
+        out = cv2.VideoWriter(video_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
+        for ts, image_dict in enumerate(video):
+            images = []
+            for cam_name in cam_names:
+                image = image_dict[cam_name]
+                image = image[:, :, [2, 1, 0]] # swap B and R channel
+                images.append(image)
+            images = np.concatenate(images, axis=1)
+            out.write(images)
+        out.release()
+        print(f'Saved video to: {video_path}')
+    elif isinstance(video, dict):
+        cam_names = list(video.keys())
+        all_cam_videos = []
+        for cam_name in cam_names:
+            all_cam_videos.append(video[cam_name])
+        all_cam_videos = np.concatenate(all_cam_videos, axis=2) # width dimension
+
+        n_frames, h, w, _ = all_cam_videos.shape
+        fps = int(1 / dt)
+        out = cv2.VideoWriter(video_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
+        for t in range(n_frames):
+            image = all_cam_videos[t]
+            image = image[:, :, [2, 1, 0]]  # swap B and R channel
+            out.write(image)
+        out.release()
+        print(f'Saved video to: {video_path}')
+
+def get_image(ts, camera_names):
+    curr_images = []
+    for cam_name in camera_names:
+        curr_image = rearrange(ts.observation['images'][cam_name], 'h w c -> c h w')
+        curr_images.append(curr_image)
+    curr_image = np.stack(curr_images, axis=0)
+    curr_image = torch.from_numpy(curr_image / 255.0).float().cuda().unsqueeze(0)
+    return curr_image
+
+def trans_np_to_torchcuda(data):
+    return torch.from_numpy(data).float().cuda()

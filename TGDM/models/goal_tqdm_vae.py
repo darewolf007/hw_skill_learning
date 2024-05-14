@@ -11,6 +11,7 @@ from TGDM.models.base_model import BaseModel
 from TGDM.util.helper import ParamDict, AttrDict
 from TGDM.util.helper import kl_divergence, KLDivLoss, NLL
 from TGDM.util.gaussian import MultivariateGaussian
+
 class Goal_TGDM_VAE(BaseModel):
     def __init__(self, params, logger=None):
         BaseModel.__init__(self, logger)

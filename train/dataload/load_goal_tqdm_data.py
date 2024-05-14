@@ -10,9 +10,11 @@ from utils.helper import read_pickle, list_files_in_directory
 from utils.general_class import AttrDict
 
 class KitenchenDataset(torch.utils.data.Dataset):
-    def __init__(self, episode_len = 100, data_path = None, skip_data = None):
+    def __init__(self, episode_len = 100, data_path = None, skip_data = None, load_all_episode = False, save_state = False, act_data = False):
         super(KitenchenDataset).__init__()
         self.episode_len = episode_len
+        self.load_all_episode = load_all_episode
+        self.act_data = act_data
         self.all_state = []
         self.all_action = []
         self.all_endeffector_pose = []
@@ -34,9 +36,9 @@ class KitenchenDataset(torch.utils.data.Dataset):
         dataset_dict['state_variance_value'] = self.state_variance_value
         dataset_dict['end_effector_xpos_mean_value'] = self.end_effector_xpos_mean_value
         dataset_dict['end_effector_xpos_variance_value'] = self.end_effector_xpos_variance_value
-        file_name = "dataset.pkl"
-        with open(file_name, 'wb') as f:
-                pickle.dump(dataset_dict, f)
+        if save_state:
+            with open(data_path + "/../dataset_state.pkl", 'wb') as f:
+                    pickle.dump(dataset_dict, f)
         self.sample_full_episode = False
         self.skip_data = skip_data
     def __len__(self):
@@ -88,6 +90,8 @@ class KitenchenDataset(torch.utils.data.Dataset):
             skip_state_data = torch.from_numpy(skip_state_data).float()
             skip_qpos_data = torch.from_numpy(skip_qpos_data).float()
             return state_data, qpos_data, action_data, is_pad, skip_state_data, skip_qpos_data
+        if self.act_data:
+            return state_data, qpos_data, action_data, is_pad
         return state_data, qpos_data, action_data, is_pad, env_goal, hl_actions, endeffector_xpose, ll_goal_xpose
 
     def get_useful_data_index(self, seq_value):
@@ -99,7 +103,11 @@ class KitenchenDataset(torch.utils.data.Dataset):
         useful_data_id = 0
         for _, value in seq_subtask_info.items():
             useful_data_id = value['done_task_idx'] if value['done_task_idx'] > useful_data_id else useful_data_id
-        load_in_data.useful_data_id = useful_data_id
+        if self.load_all_episode:
+            useful_data_id = self.episode_len
+            load_in_data.useful_data_id = useful_data_id
+        else:
+            load_in_data.useful_data_id = useful_data_id
         load_in_data.action = np.array(seq_action[1:useful_data_id]).astype(np.float32)
         load_in_data.state = np.array(seq_states[1:useful_data_id]).astype(np.float32)
         load_in_data.end_effector_xpos = np.array(seq_end_effector_xpos[1:useful_data_id]).astype(np.float32)
@@ -120,7 +128,10 @@ class KitenchenDataset(torch.utils.data.Dataset):
 def load_data(args_config, base_dir):
     data_path = os.path.join(base_dir, args_config[args_config['task_name']]['dataset_dir'])
     episode_len = args_config[args_config['task_name']]['episode_len']
-    if args_config['task_name'] == "goal_tgdm_kitchen_panda":
+    if args_config['policy_class'] == "ACT":
+        train_dataset = KitenchenDataset(episode_len = episode_len, data_path = data_path+ '/train', load_all_episode=args_config['load_all_episode'], save_state = True, act_data=True)
+        val_dataset = KitenchenDataset(episode_len = episode_len, data_path = data_path+ '/val', load_all_episode=args_config['load_all_episode'], act_data=True)
+    elif args_config['task_name'] == "goal_tgdm_kitchen_panda":
         train_dataset = KitenchenDataset(episode_len = episode_len, data_path = data_path+ '/train')
         val_dataset = KitenchenDataset(episode_len = episode_len, data_path = data_path+ '/val')
     else:

@@ -1,12 +1,12 @@
-import matplotlib.pyplot as plt
-import numpy as np
 import os
 import wandb
 import inspect
 import torch
 import datetime
+import numpy as np
+import matplotlib.pyplot as plt
 from PIL import Image
-from general_utils import flatten_dict, prefix_dict
+from utils.general_utils import flatten_dict, prefix_dict
 
 def fig2img(fig):
     """Converts a given figure handle to a 3-channel numpy image array."""

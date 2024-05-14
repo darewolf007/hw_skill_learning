@@ -1,4 +1,4 @@
-from helper import map_recursive, map_recursive_list
+from utils.helper import map_recursive, map_recursive_list
 
 class RecursiveAverageMeter(object):
     """Computes and stores the average and current value"""

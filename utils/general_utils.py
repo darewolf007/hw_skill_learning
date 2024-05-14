@@ -1,7 +1,7 @@
 import numpy as np
 import collections
 from functools import partial, reduce
-from general_class import AttrDict
+from utils.general_class import AttrDict
 
 
 def map_dict(fn, d):
